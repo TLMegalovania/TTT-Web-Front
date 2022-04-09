@@ -1,0 +1,33 @@
+{
+  "name": "ttt-web-front",
+  "version": "0.0.1",
+  "description": "Frontend of TTT-Web.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/TLMegalovania/TTT-Web-Front.git"
+  },
+  "keywords": [
+    "Tic-Tac-Toe"
+  ],
+  "author": "TlMegalovania",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/TLMegalovania/TTT-Web-Front/issues"
+  },
+  "homepage": "https://github.com/TLMegalovania/TTT-Web-Front#readme",
+  "private": true,
+  "dependencies": {
+    "@microsoft/signalr": "^6.0.3",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "vite": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0"
+  }
+}
