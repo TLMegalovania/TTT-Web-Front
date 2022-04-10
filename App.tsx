@@ -1,69 +1,107 @@
 import { FC, useState } from "react";
 import { render } from "react-dom";
-import { HubConnectionBuilder, IStreamResult } from "@microsoft/signalr";
-
-enum RootState {
-  None,
-  LoggedIn,
-  AsOwner,
-  AsGuest,
-  AsAudience,
-}
-
-enum TurnType {
-  Null,
-  Black,
-  White,
-  Tie,
-}
-
-type RoomInfo = {
-  ID: string;
-  OwnerName: string;
-  GuestName: string | null;
-  GameStarted: boolean;
-};
-
-type MoveInfo = {
-  x: number;
-  y: number;
-  Turn: TurnType;
-  Result: TurnType;
-};
-
-type RPC = {
-  login: (username: string) => Promise<void>;
-  getRooms: () => IStreamResult<RoomInfo>;
-  createRoom: () => Promise<boolean>;
-  joinRoom: (id: string) => Promise<boolean>;
-  leaveRoom: () => Promise<void>;
-  deleteRoom: () => Promise<void>;
-  startGame: (rows: number, cols: number) => Promise<void>;
-  endGame: () => Promise<void>;
-  getBoard: () => IStreamResult<TurnType[]>;
-  makeMove: (x: number, y: number) => Promise<boolean>;
-};
+import { HubConnectionBuilder } from "@microsoft/signalr";
+import { Index } from "./Index";
+import { Hall } from "./Hall";
+import { Callback, PlayerType, RootState, RPC } from "./Types";
+import { Room } from "./Room";
 
 const App: FC = () => {
   const connection = new HubConnectionBuilder().withUrl("/api").build();
   const [username, setUsername] = useState("");
-  const rpc: RPC = {
-    login: async (username) => await connection.invoke("Login", username),
-    getRooms: () => connection.stream("GetRooms"),
-    createRoom: () => connection.invoke("CreateRoom"),
-    joinRoom: (id) => connection.invoke("JoinRoom", id),
-    leaveRoom: () => connection.invoke("LeaveRoom"),
-    deleteRoom: () => connection.invoke("DeleteRoom"),
-    startGame: (rows, cols) => connection.invoke("StartGame", rows, cols),
-    endGame: () => connection.invoke("EndGame"),
-    getBoard: () => connection.stream("GetBoard"),
-    makeMove: (x, y) => connection.invoke("MakeMove", x, y),
-  };
   const [rootState, setRootState] = useState(RootState.None);
-  return null;
+  const [ownerName, setOwnerName] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const rpc: RPC = {
+    login: (username) => connection.invoke("login", username),
+    getRooms: () => connection.stream("getRooms"),
+    createRoom: () => connection.invoke("createRoom"),
+    joinRoom: (id) => connection.invoke("joinRoom", id),
+    leaveRoom: () => connection.invoke("leaveRoom"),
+    deleteRoom: () => connection.invoke("deleteRoom"),
+    startGame: (rows, cols) => connection.invoke("startGame", rows, cols),
+    endGame: () => connection.invoke("endGame"),
+    getBoard: () => connection.stream("getBoard"),
+    makeMove: (x, y) => connection.invoke("makeMove", x, y),
+  };
+  const callback: Callback = {
+    roomCreated: (callback) => {
+      connection.off("roomCreated");
+      connection.on("roomCreated", callback);
+    },
+    joinedRoom: (callback) => {
+      connection.off("joinedRoom");
+      connection.on("joinedRoom", callback);
+    },
+    leftRoom: (callback) => {
+      connection.off("leftRoom");
+      connection.on("leftRoom", callback);
+    },
+    roomDeleted: (callback) => {
+      connection.off("roomDeleted");
+      connection.on("roomDeleted", callback);
+    },
+    gameStarted: (callback) => {
+      connection.off("gameStarted");
+      connection.on("gameStarted", callback);
+    },
+    gameEnded: (callback) => {
+      connection.off("gameEnded");
+      connection.on("gameEnded", callback);
+    },
+    madeMove: (callback) => {
+      connection.off("madeMove");
+      connection.on("madeMove", callback);
+    },
+  };
+  let page: JSX.Element | null = null;
+  switch (rootState) {
+    case RootState.None:
+      page = (
+        <Index
+          setRootState={setRootState}
+          setUsername={setUsername}
+          rpc={rpc}
+        />
+      );
+      break;
+    case RootState.LoggedIn:
+      page = (
+        <Hall
+          username={username}
+          rpc={rpc}
+          setRootState={setRootState}
+          callback={callback}
+          setOwnerName={setOwnerName}
+          setGuestName={setGuestName}
+          setRoomId={setRoomId}
+        />
+      );
+      break;
+    case RootState.AsOwner:
+    case RootState.AsGuest:
+    case RootState.AsAudience:
+      page = (
+        <Room
+          owner={ownerName}
+          guest={guestName}
+          rpc={rpc}
+          setRootState={setRootState}
+          playerType={
+            username === ownerName
+              ? PlayerType.Owner
+              : username === guestName
+              ? PlayerType.Guest
+              : PlayerType.Audience
+          }
+          callback={callback}
+          id={roomId}
+        />
+      );
+      break;
+  }
+  return page;
 };
 
 render(<App />, document.getElementById("root"));
-
-export { RootState };
-export type { RPC };

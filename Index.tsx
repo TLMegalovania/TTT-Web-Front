@@ -1,9 +1,10 @@
 import { FC, useRef } from "react";
-import { RootState } from "./App";
+import { RootState, RPC } from "./Types";
 
 type Props = {
   setRootState: (state: RootState) => void;
   setUsername: (username: string) => void;
+  rpc: RPC;
 };
 
 const Index: FC<Props> = (props) => {
@@ -14,8 +15,11 @@ const Index: FC<Props> = (props) => {
       <input type="text" ref={inputRef} required placeholder="Username" />
       <button
         onClick={() => {
-          props.setUsername(inputRef.current.value);
-          props.setRootState(RootState.LoggedIn);
+          const username = inputRef.current.value;
+          props.rpc.login(username).then(() => {
+            props.setUsername(username);
+            props.setRootState(RootState.LoggedIn);
+          });
         }}
       >
         Login
@@ -24,4 +28,4 @@ const Index: FC<Props> = (props) => {
   );
 };
 
-export default Index;
+export { Index };
