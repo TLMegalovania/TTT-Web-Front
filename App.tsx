@@ -8,6 +8,7 @@ import { Room } from "./Room";
 
 const App: FC = () => {
   const connection = new HubConnectionBuilder().withUrl("/api").build();
+  connection.start().catch((err) => console.error(err));
   const [username, setUsername] = useState("");
   const [rootState, setRootState] = useState(RootState.None);
   const [ownerName, setOwnerName] = useState("");
