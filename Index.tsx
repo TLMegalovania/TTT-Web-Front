@@ -16,6 +16,10 @@ const Index: FC<Props> = (props) => {
       <button
         onClick={() => {
           const username = inputRef.current.value;
+          if (!username || username == "") {
+            alert("Please enter a username");
+            return;
+          }
           props.rpc.login(username).then(() => {
             props.setUsername(username);
             props.setRootState(RootState.LoggedIn);
