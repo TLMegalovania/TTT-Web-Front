@@ -1,6 +1,6 @@
 import { FC, useEffect, useMemo, useState } from "react";
 import { render } from "react-dom";
-import { HubConnectionBuilder } from "@microsoft/signalr";
+import { HttpTransportType, HubConnectionBuilder } from "@microsoft/signalr";
 import { Index } from "./Index";
 import { Hall } from "./Hall";
 import { Room } from "./Room";
@@ -39,7 +39,12 @@ const App: FC = () => {
     makeMove: (x, y) => connection.invoke("makeMove", x, y),
   };
   const connection = useMemo(() => {
-    const connection = new HubConnectionBuilder().withUrl("/api/hub").build();
+    const connection = new HubConnectionBuilder()
+      .withUrl("/api/hub", {
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets,
+      })
+      .build();
     connection.start().then(() => {
       connection.stream("getRooms").subscribe({
         next: (room: RoomInfo) => {
@@ -136,6 +141,7 @@ const App: FC = () => {
       });
       if (id == roomId) {
         setRoomId(null);
+        setRootState(RootState.LoggedIn);
       }
     });
     connection.on("gameStarted", (id: string) => {
@@ -176,37 +182,6 @@ const App: FC = () => {
     };
   }, [roomId]);
   useEffect(() => {
-    if (rootState === RootState.LoggedIn) {
-      setRoomId(null);
-    }
-    if (rootState != RootState.AsAudience) return;
-    const theBoard = new Array<TurnType[]>();
-    rpc.getBoard().subscribe({
-      next: (row) => {
-        theBoard.push(row);
-      },
-      complete: () => {
-        setBoard((oldBoard) => {
-          const newBoard = oldBoard.map((row) => [...row]);
-          theBoard.forEach((row, i) => {
-            row.forEach((cell, j) => {
-              if (cell != TurnType.Null) newBoard[i][j] = cell;
-            });
-          });
-          return newBoard;
-        });
-      },
-      error: (error) => console.error(error),
-    });
-    return () => setBoard(emptyBoard);
-  }, [rootState]);
-  useEffect(() => {
-    const room = rooms.get(roomId);
-    if (!room) {
-      return;
-    }
-    setOwnerName(room.ownerName);
-    setGuestName(room.guestName);
     switch (rootState) {
       case RootState.AsOwner:
         setPlayerType(PlayerType.Owner);
@@ -216,12 +191,38 @@ const App: FC = () => {
         break;
       case RootState.AsAudience:
         setPlayerType(PlayerType.Audience);
+        const theBoard = new Array<TurnType[]>();
+        rpc.getBoard().subscribe({
+          next: (row) => {
+            theBoard.push(row);
+          },
+          complete: () => {
+            setBoard((oldBoard) => {
+              const newBoard = oldBoard.map((row) => [...row]);
+              theBoard.forEach((row, i) => {
+                row.forEach((cell, j) => {
+                  if (cell != TurnType.Null) newBoard[i][j] = cell;
+                });
+              });
+              return newBoard;
+            });
+          },
+          error: (error) => console.error(error),
+        });
         break;
       default:
         setPlayerType(PlayerType.Null);
         break;
     }
-  }, [roomId]);
+    return () => setBoard(emptyBoard);
+  }, [rootState]);
+  useEffect(() => {
+    const room = rooms.get(roomId);
+    if (room) {
+      setOwnerName(room.ownerName);
+      setGuestName(room.guestName);
+    }
+  }, [roomId, rooms]);
   switch (rootState) {
     case RootState.None:
       return (
@@ -250,6 +251,7 @@ const App: FC = () => {
           board={board}
           playerType={playerType}
           setRootState={setRootState}
+          setRoomId={setRoomId}
           owner={ownerName}
           guest={guestName}
           nextTurnType={nextTurnType}

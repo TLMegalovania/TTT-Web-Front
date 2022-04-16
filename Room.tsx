@@ -3,6 +3,7 @@ import { RootState, RPC, PlayerType, TurnType } from "./Types";
 
 type Props = {
   setRootState: (state: RootState) => void;
+  setRoomId: (id: string) => void;
   owner: string;
   guest?: string;
   playerType: PlayerType;
@@ -20,6 +21,7 @@ const Room: FC<Props> = (props) => {
           if (props.playerType == PlayerType.Guest) props.rpc.leaveRoom();
           else props.rpc.deleteRoom();
           props.setRootState(RootState.LoggedIn);
+          props.setRoomId(null);
         }}
       >
         Leave
